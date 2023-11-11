@@ -16,6 +16,28 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@app/main/*": [
+        "apps/main/src/*"
+      ],
+      "@app/user/*": [
+        "apps/user/src/*"
+      ],
+      "@app/auth/*": [
+        "apps/auth/src/*"
+      ],
+      "@app/movie/*": [
+        "apps/movie/src/*"
+      ],
+      "@app/shared": [
+        "libs/shared/src",
+        "libs/shared/src"
+      ],
+      "@app/shared/*": [
+        "libs/shared/src/*",
+        "libs/shared/src/*"
+      ]
+    }
   }
 }
