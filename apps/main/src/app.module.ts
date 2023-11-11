@@ -10,10 +10,17 @@ import {
   AUTH_CLIENT,
   AUTH_SERVICE,
 } from '@app/auth/domain/contracts/auth.service';
+import {
+  MOVIE_CLIENT,
+  MOVIE_SERVICE,
+} from '@app/movie/domain/contracts/movie.service';
 import { UserController } from '@app/main/user/user.controller';
 import { AuthController } from '@app/main/auth/auth.controller';
+import { MovieController } from '@app/main/movie/movie.controller';
+
 import { UserProxy } from '@app/user/infrastructure/external/user.proxy';
 import { AuthProxy } from '@app/auth/infrastructure/external/auth.proxy';
+import { MovieProxy } from '@app/movie/infrastructure/external/movie.proxy';
 
 import * as Joi from 'joi';
 
@@ -59,7 +66,7 @@ import * as Joi from 'joi';
         inject: [ConfigService],
       },
       {
-        name: 'MOVIE_CLIENT',
+        name: MOVIE_CLIENT,
         imports: [ConfigModule],
         useFactory: async (configService: ConfigService) => ({
           transport: Transport.TCP,
@@ -72,7 +79,7 @@ import * as Joi from 'joi';
       },
     ]),
   ],
-  controllers: [UserController, AuthController],
+  controllers: [UserController, AuthController, MovieController],
   providers: [
     {
       provide: USER_SERVICE,
@@ -81,6 +88,10 @@ import * as Joi from 'joi';
     {
       provide: AUTH_SERVICE,
       useClass: AuthProxy,
+    },
+    {
+      provide: MOVIE_SERVICE,
+      useClass: MovieProxy,
     },
   ],
 })

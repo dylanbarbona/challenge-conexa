@@ -1,6 +1,7 @@
 import { Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { AccessTokenEntity } from '@app/auth/domain/entities/access.token';
+
 import { User } from '@app/user/domain/entities/user.entity';
 import { Observable } from 'rxjs';
 import { RegisterUserDto } from '@app/auth/domain/dto/register-user.dto';

@@ -19,6 +19,7 @@ import { LoginUserDto } from '@app/auth/domain/dto/login-user.dto';
 import { User } from '@app/user/domain/entities/user.entity';
 import { RegisterUserDto } from '@app/auth/domain/dto/register-user.dto';
 import { AccessTokenEntity } from '@app/auth/domain/entities/access.token';
+
 import { UserGuard } from './guards/user.guard';
 import {
   AUTH_SERVICE,
