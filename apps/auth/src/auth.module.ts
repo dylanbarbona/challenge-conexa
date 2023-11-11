@@ -1,10 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { UserProxy } from '@app/user/infrastructure/external/user.proxy';
+import { AuthService } from '@app/auth/application/services/auth.service';
+import { AuthController } from '@app/auth/infrastructure/controllers/auth.controller';
+import { AUTH_SERVICE } from '@app/auth/domain/contracts/auth.service';
+import {
+  USER_CLIENT,
+  USER_SERVICE,
+} from '@app/user/domain/contracts/user.service';
 
 import * as Joi from 'joi';
 
@@ -35,7 +41,7 @@ import * as Joi from 'joi';
 
     ClientsModule.registerAsync([
       {
-        name: 'USER_CLIENT',
+        name: USER_CLIENT,
         imports: [ConfigModule],
         useFactory: async (configService: ConfigService) => ({
           transport: Transport.TCP,
@@ -49,6 +55,15 @@ import * as Joi from 'joi';
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [
+    {
+      provide: AUTH_SERVICE,
+      useClass: AuthService,
+    },
+    {
+      provide: USER_SERVICE,
+      useClass: UserProxy,
+    },
+  ],
 })
 export class AuthModule {}

@@ -86,7 +86,12 @@
       "<rootDir>/libs/"
     ],
     "moduleNameMapper": {
-      "^@app/shared(|/.*)$": "<rootDir>/libs/shared/src/$1"
+      "^@app/main/(.*)$": "<rootDir>/apps/main/src/$1",
+      "^@app/user/(.*)$": "<rootDir>/apps/user/src/$1",
+      "^@app/auth/(.*)$": "<rootDir>/apps/auth/src/$1",
+      "^@app/movie/(.*)$": "<rootDir>/apps/movie/src/$1",
+      "^@app/shared$": "<rootDir>/libs/shared/src",
+      "^@app/shared/(.*)$": "<rootDir>/libs/shared/src/$1"
     }
   }
 }

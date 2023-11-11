@@ -1,9 +1,18 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { UserController } from './user.controller';
-import { UserService } from './user.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 
 import * as Joi from 'joi';
+
+import { UserController } from '@app/user/infrastructure/controllers/user.controller';
+import { UserService } from '@app/user/application/services/user.service';
+import { MongoUserRepository } from '@app/user/infrastructure/repository/mongo-user.repository';
+import { User } from '@app/user/domain/entities/user.entity';
+import { UserSchema } from '@app/user/infrastructure/schemas/user.schema';
+import { USER_SERVICE } from '@app/user/domain/contracts/user.service';
+import { USER_REPOSITORY } from '@app/user/domain/contracts/user.repository';
+
+export const USER_DATABASE = 'user-db';
 
 @Module({
   imports: [
@@ -18,8 +27,20 @@ import * as Joi from 'joi';
       }),
       envFilePath: '.env',
     }),
+
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        uri: configService.get('MONGODB_URI'),
+      }),
+    }),
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
   controllers: [UserController],
-  providers: [UserService],
+  providers: [
+    { provide: USER_SERVICE, useClass: UserService },
+    { provide: USER_REPOSITORY, useClass: MongoUserRepository },
+  ],
 })
 export class UserModule {}
