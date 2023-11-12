@@ -5,14 +5,19 @@ import {
 } from '@app/movie/domain/contracts/movie.service';
 import { MovieService } from '@app/movie/application/services/movie.service';
 import {
+  EXTERNAL_MOVIE_REPOSITORY,
+  IExternalMovieRepository,
   IMovieRepository,
   MOVIE_REPOSITORY,
 } from '@app/movie/domain/contracts/movie.repository';
 import { SearchMovieDto } from '@app/movie/domain/dto/search-movie.dto';
 import { Movie } from '@app/movie/domain/entities/movie.entity';
 import { Observable } from 'rxjs';
+import {
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { faker } from '@faker-js/faker';
-import { BadRequestException } from '@nestjs/common';
 import { CreateMovieDto } from '@app/movie/domain/dto/create-movie.dto';
 import { UpdateMovieDto } from '@app/movie/domain/dto/update-movie.dto';
 import { DeleteMovieDto } from '@app/movie/domain/dto/delete-movie.dto';
@@ -20,6 +25,7 @@ import { DeleteMovieDto } from '@app/movie/domain/dto/delete-movie.dto';
 describe('MovieService', () => {
   let movieService: IMovieService;
   let movieRepository: jest.Mocked<IMovieRepository>;
+  let externalMovieRepository: jest.Mocked<IExternalMovieRepository>;
 
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
@@ -32,18 +38,28 @@ describe('MovieService', () => {
           provide: MOVIE_REPOSITORY,
           useValue: {
             search: jest.fn(),
-            findById: jest.fn(),
+            findOne: jest.fn(),
             create: jest.fn(),
-            updateById: jest.fn(),
-            deleteById: jest.fn(),
-          },
+            update: jest.fn(),
+            deleteOne: jest.fn(),
+          } as IMovieRepository,
+        },
+        {
+          provide: EXTERNAL_MOVIE_REPOSITORY,
+          useValue: {
+            findOne: jest.fn(),
+            search: jest.fn(),
+          } as IExternalMovieRepository,
         },
       ],
     }).compile();
 
     movieService = app.get(MOVIE_SERVICE);
     movieRepository = app.get(MOVIE_REPOSITORY);
+    externalMovieRepository = app.get(EXTERNAL_MOVIE_REPOSITORY);
   });
+
+  afterEach(() => jest.clearAllMocks());
 
   it('should be defined', () => {
     expect(movieService).toBeDefined();
@@ -58,6 +74,10 @@ describe('MovieService', () => {
         limit: 10,
       } as SearchMovieDto;
       const movies: Movie[] = [new Movie({})];
+
+      externalMovieRepository.search.mockReturnValueOnce(
+        Promise.resolve(movies),
+      );
       movieRepository.search.mockReturnValueOnce(Promise.resolve(movies));
 
       // Act
@@ -67,14 +87,82 @@ describe('MovieService', () => {
       expect(result).toBeInstanceOf(Observable<Movie[]>);
       result.subscribe((movies) => expect(movies).toEqual(movies));
     });
+
+    it('should handle exceptions from external movie repository', async () => {
+      // Arrange
+      const searchDto = {
+        query: '',
+        skip: 1,
+        limit: 10,
+      } as SearchMovieDto;
+      const movies: Movie[] = [new Movie({})];
+
+      externalMovieRepository.search.mockReturnValueOnce(
+        Promise.reject(new InternalServerErrorException()),
+      );
+      movieRepository.search.mockReturnValueOnce(Promise.resolve(movies));
+
+      // Act
+      try {
+        await movieService.find(searchDto).toPromise();
+      } catch (error) {
+        // Assert
+        expect(error).toBeInstanceOf(InternalServerErrorException);
+      }
+    });
+
+    it('should handle exceptions from movie repository', async () => {
+      // Arrange
+      const searchDto = {
+        query: '',
+        skip: 1,
+        limit: 10,
+      } as SearchMovieDto;
+      const movies: Movie[] = [new Movie({})];
+
+      externalMovieRepository.search.mockReturnValueOnce(
+        Promise.resolve(movies),
+      );
+      movieRepository.search.mockReturnValueOnce(
+        Promise.reject(new InternalServerErrorException()),
+      );
+
+      // Act
+      try {
+        await movieService.find(searchDto).toPromise();
+      } catch (error) {
+        // Assert
+        expect(error).toBeInstanceOf(InternalServerErrorException);
+      }
+    });
   });
 
   describe('findById', () => {
     it('should return a movie by ID', async () => {
       // Arrange
-      const movieId = faker.string.uuid();
+      const movieId = faker.number.int();
       const movie: Movie = new Movie({});
-      movieRepository.findById.mockReturnValueOnce(Promise.resolve(movie));
+      movieRepository.findOne.mockReturnValueOnce(Promise.resolve(movie));
+
+      // Act
+      const result = await movieService.findById(movieId);
+
+      // Assert
+      expect(result).toBeInstanceOf(Observable<Movie>);
+      result.subscribe((movie) => expect(movie).toEqual(movie));
+    });
+
+    it('should return external movie by ID', async () => {
+      // Arrange
+      const movieId = faker.number.int();
+      const movie: Movie = new Movie({ external_id: movieId });
+      movieRepository.findOne.mockReturnValueOnce(
+        Promise.reject(new NotFoundException()),
+      );
+      movieRepository.update.mockReturnValueOnce(Promise.resolve(movie));
+      externalMovieRepository.findOne.mockReturnValueOnce(
+        Promise.resolve(movie),
+      );
 
       // Act
       const result = await movieService.findById(movieId);
@@ -86,18 +174,20 @@ describe('MovieService', () => {
 
     it('should throw an exception if movie id doesnt exist', async () => {
       // Arrange
-      const movieId = faker.string.uuid();
-      const movie: Movie = new Movie({});
-      movieRepository.findById.mockReturnValueOnce(
-        Promise.reject(new BadRequestException()),
+      const movieId = faker.number.int();
+      movieRepository.findOne.mockReturnValueOnce(
+        Promise.reject(new NotFoundException()),
+      );
+      externalMovieRepository.findOne.mockReturnValueOnce(
+        Promise.reject(new NotFoundException()),
       );
 
       // Act
       try {
         await movieService.findById(movieId).toPromise();
-      } catch (e) {
+      } catch (error) {
         // Assert
-        expect(e).toBeInstanceOf(BadRequestException);
+        expect(error).toBeInstanceOf(NotFoundException);
       }
     });
   });
@@ -105,14 +195,9 @@ describe('MovieService', () => {
   describe('create', () => {
     it('should create a new movie', async () => {
       // Arrange
-      const movie: Movie = new Movie({
-        _id: faker.string.uuid(),
-        title: faker.lorem.sentence(),
-        director: faker.person.firstName(),
-        genre: faker.music.genre(),
-        synopsis: faker.lorem.text(),
-      });
-      const createDto = {} as CreateMovieDto;
+      const external_id = faker.number.int();
+      const movie: Movie = new Movie({ external_id });
+      const createDto = { external_id } as CreateMovieDto;
       movieRepository.create.mockReturnValueOnce(Promise.resolve(movie));
 
       // Act
@@ -127,19 +212,25 @@ describe('MovieService', () => {
   describe('update', () => {
     it('should update a movie by ID', async () => {
       // Arrange
+      const _id = faker.string.uuid();
+      const oldName = faker.person.firstName();
+      const newName = faker.person.firstName();
       const movie: Movie = new Movie({
-        _id: faker.string.uuid(),
-        title: faker.lorem.sentence(),
-        director: faker.person.firstName(),
-        genre: faker.music.genre(),
-        synopsis: faker.lorem.text(),
+        _id,
+        external_id: faker.number.int(),
+        title: oldName,
       });
-      const updateMovieDto = {} as UpdateMovieDto;
+      const updateMovieDto = { title: newName } as UpdateMovieDto;
+      const newMovie = new Movie({ ...movie, ...updateMovieDto });
 
-      movieRepository.updateById.mockReturnValueOnce(Promise.resolve(movie));
+      movieRepository.update.mockReturnValueOnce(Promise.resolve(movie));
+      movieRepository.findOne.mockReturnValueOnce(Promise.resolve(newMovie));
 
       // Act
-      const result = await movieService.update(movie._id, updateMovieDto);
+      const result = await movieService.update(
+        movie.external_id,
+        updateMovieDto,
+      );
 
       // Assert
       expect(result).toBeInstanceOf(Observable<Movie>);
@@ -151,15 +242,15 @@ describe('MovieService', () => {
       const _id = faker.number.int();
       const updateMovieDto = {} as UpdateMovieDto;
 
-      movieRepository.updateById.mockReturnValueOnce(
-        Promise.reject(new BadRequestException()),
+      movieRepository.update.mockReturnValueOnce(
+        Promise.reject(new NotFoundException()),
       );
 
       // Act & Assert
       try {
         await movieService.update(_id, updateMovieDto).toPromise();
       } catch (error) {
-        expect(error).toBeInstanceOf(BadRequestException);
+        expect(error).toBeInstanceOf(NotFoundException);
         expect(error).toBeDefined();
       }
     });
@@ -168,26 +259,34 @@ describe('MovieService', () => {
   describe('delete', () => {
     it('should update a movie by ID', async () => {
       // Arrange
-      const movie: Movie = new Movie({ external_id: faker.number.int() });
+      const deletedAt = new Date();
+      const movie: Movie = new Movie({
+        external_id: faker.number.int(),
+        _id: faker.number.int(),
+      });
+      const newMovie = new Movie({ ...movie, deletedAt });
 
-      movieRepository.deleteById.mockReturnValueOnce(Promise.resolve(movie));
+      movieRepository.findOne.mockReturnValueOnce(Promise.resolve(movie));
+      movieRepository.deleteOne.mockReturnValueOnce(Promise.resolve(newMovie));
 
       // Act
-      const result = await movieService.delete({
-        external_id: movie.external_id,
-      });
+      const result = await movieService
+        .delete({
+          external_id: movie.external_id,
+        })
+        .toPromise();
 
       // Assert
-      expect(result).toBeInstanceOf(Observable<Movie>);
-      result.subscribe((movie) => expect(movie).toEqual(movie));
+      expect(result).toBeInstanceOf(Movie);
+      expect(result).toEqual(newMovie);
     });
 
     it('should throw an exception if movie id doesnt exist during delete', async () => {
       // Arrange
       const _id = faker.number.int();
 
-      movieRepository.deleteById.mockReturnValueOnce(
-        Promise.reject(new BadRequestException()),
+      movieRepository.findOne.mockReturnValueOnce(
+        Promise.reject(new NotFoundException()),
       );
 
       // Act & Assert
@@ -196,7 +295,7 @@ describe('MovieService', () => {
           .delete({ external_id: _id } as DeleteMovieDto)
           .toPromise();
       } catch (error) {
-        expect(error).toBeInstanceOf(BadRequestException);
+        expect(error).toBeInstanceOf(NotFoundException);
         expect(error).toBeDefined();
       }
     });

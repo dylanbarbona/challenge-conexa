@@ -54,7 +54,7 @@ export class MovieController {
   @Get('/:id')
   @UseGuards(UserGuard, RolesGuard)
   @Roles(Role.Regular)
-  findById(@Param('id') id: string): Observable<Movie> {
+  findById(@Param('id') id: number): Observable<Movie> {
     return this.movieService.findById(id);
   }
 

@@ -19,7 +19,7 @@ export class MovieProxy implements IMovieService {
     return this.client.send({ cmd: MOVIE_CLIENT_CMD.FIND }, input);
   }
 
-  findById(id: string): Observable<Movie> {
+  findById(id: number): Observable<Movie> {
     return this.client.send({ cmd: MOVIE_CLIENT_CMD.FIND_BY_ID }, { id });
   }
 

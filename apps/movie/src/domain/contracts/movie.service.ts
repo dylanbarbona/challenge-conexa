@@ -19,11 +19,11 @@ export enum MOVIE_CLIENT_CMD {
 export interface IMovieService {
   find(input: SearchMovieDto): Observable<Movie[]>;
 
-  findById(id: string): Observable<Movie>;
+  findById(id: number): Observable<Movie>;
 
   create(input: CreateMovieDto): Observable<Movie>;
 
-  update(_id: number, input: UpdateMovieDto): Observable<Movie>;
+  update(id: number, input: UpdateMovieDto): Observable<Movie>;
 
   delete(input: DeleteMovieDto): Observable<Movie>;
 }

@@ -5,10 +5,7 @@ import {
   IUserService,
   USER_SERVICE,
 } from '@app/user/domain/contracts/user.service';
-import {
-  AUTH_SERVICE,
-  IAuthService,
-} from '@app/auth/domain/contracts/auth.service';
+import { AUTH_SERVICE } from '@app/auth/domain/contracts/auth.service';
 import { User } from '@app/user/domain/entities/user.entity';
 import { faker } from '@faker-js/faker';
 import { UpdateUserDto } from '@app/user/domain/dto/update-user.dto';
@@ -18,7 +15,6 @@ import { NotFoundException } from '@nestjs/common';
 describe('Main/UserController', () => {
   let userController: UserController;
   let userService: jest.Mocked<IUserService>;
-  let authService: jest.Mocked<IAuthService>;
 
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
@@ -41,7 +37,6 @@ describe('Main/UserController', () => {
 
     userController = app.get(UserController);
     userService = app.get(USER_SERVICE);
-    authService = app.get(AUTH_SERVICE);
   });
 
   it('should be defined', () => {

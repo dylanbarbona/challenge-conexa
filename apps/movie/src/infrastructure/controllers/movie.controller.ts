@@ -24,7 +24,7 @@ export class MovieController {
   }
 
   @MessagePattern({ cmd: MOVIE_CLIENT_CMD.FIND_BY_ID })
-  findById(input: { id: string }): Observable<Movie> {
+  findById(input: { id: number }): Observable<Movie> {
     return this.movieService.findById(input.id);
   }
 

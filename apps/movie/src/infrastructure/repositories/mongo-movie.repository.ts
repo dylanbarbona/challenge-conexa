@@ -1,9 +1,8 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Connection, Model } from 'mongoose';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { BaseRepository } from '@app/shared/repository/base.repository';
 import {
-  EXTERNAL_MOVIE_REPOSITORY,
   IExternalMovieRepository,
   IMovieRepository,
 } from '@app/movie/domain/contracts/movie.repository';
@@ -23,59 +22,13 @@ export class MongoMovieRepository<T extends MovieDocument>
     @InjectModel(Movie.name, MOVIE_DATABASE)
     protected readonly model: Model<T>,
     @InjectConnection(MOVIE_DATABASE) protected readonly connection: Connection,
-    @Inject(EXTERNAL_MOVIE_REPOSITORY)
-    private readonly externalMovieRepository: IExternalMovieRepository,
   ) {
     super();
   }
 
-  async findById(id: string): Promise<Movie> {
-    let movie;
-    try {
-      movie = await super.findOne({ external_id: id });
-    } catch (e) {
-      movie = await this.externalMovieRepository.findById(id);
-      await super.upsert({ external_id: movie.external_id }, movie, {
-        new: true,
-        upsert: true,
-      });
-    }
-    try {
-      movie = await super.findOne({
-        external_id: movie.external_id,
-        deletedAt: null,
-      });
-    } catch (error) {
-      movie = null;
-    }
-    if (!movie) throw new NotFoundException('La pelicula no existe');
-    return new Movie(movie);
-  }
-
-  async create(input: CreateMovieDto): Promise<Movie> {
-    await super.upsert(
-      { external_id: input.external_id },
-      { ...input, deletedAt: null },
-      {
-        new: true,
-        upsert: true,
-      },
-    );
-    const movie = await this.findById(String(input.external_id));
-    return new Movie(movie);
-  }
-
   async search(input: SearchMovieDto): Promise<Movie[]> {
-    let movies = await this.externalMovieRepository.search(input);
-    for (const movie of movies) {
-      await super.upsert({ external_id: movie.external_id }, movie, {
-        new: true,
-        upsert: true,
-      });
-    }
-
     const regex = new RegExp(input.query, 'i');
-    movies = await super.search(
+    const movies = await super.search(
       {
         $and: [
           {
@@ -108,8 +61,25 @@ export class MongoMovieRepository<T extends MovieDocument>
     return movies.map((movie) => new Movie(movie));
   }
 
-  async updateById(id: number, input: UpdateMovieDto): Promise<Movie> {
-    const { _id, ...movie } = await this.findById(String(id));
+  async findOne({ external_id }: { external_id: number }): Promise<Movie> {
+    const movie = await super.findOne({ external_id });
+    return new Movie(movie);
+  }
+
+  async create(input: CreateMovieDto): Promise<Movie> {
+    try {
+      const movie = await super.create(input);
+      return new Movie(movie);
+    } catch (e) {
+      throw new BadRequestException('Error al crear la película');
+    }
+  }
+
+  async update(
+    filter: { external_id: number },
+    input: UpdateMovieDto,
+  ): Promise<Movie> {
+    const { _id, ...movie } = await this.findById(String(filter.external_id));
     const updatedMovie = await this.model.findByIdAndUpdate(
       _id,
       {
@@ -122,8 +92,8 @@ export class MongoMovieRepository<T extends MovieDocument>
     return new Movie(updatedMovie);
   }
 
-  async deleteById(id): Promise<Movie> {
-    const { _id, ...movie } = await this.findById(String(id));
+  async deleteOne({ external_id }: { external_id: number }): Promise<Movie> {
+    const { _id, ...movie } = await this.findOne({ external_id });
     const deletedMovie = await this.model.findByIdAndUpdate(
       _id,
       { ...movie, deletedAt: new Date() },

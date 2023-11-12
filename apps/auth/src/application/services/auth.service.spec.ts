@@ -18,6 +18,7 @@ import { RegisterUserDto } from '@app/auth/domain/dto/register-user.dto';
 import { Types } from 'mongoose';
 import {
   BadRequestException,
+  HttpException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -106,7 +107,7 @@ describe('Main/MovieController', () => {
         await authService.login(loginDto).toPromise();
       } catch (e) {
         // Assert
-        expect(e).toBeDefined();
+        expect(e).toBeInstanceOf(HttpException);
       }
     });
   });

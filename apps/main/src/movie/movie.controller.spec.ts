@@ -73,7 +73,7 @@ describe('Main/MovieController', () => {
 
   it('findById', () => {
     // Arrange
-    const id = faker.string.uuid();
+    const id = faker.number.int();
     const movie = new Movie({
       _id: faker.string.uuid(),
       title: faker.lorem.sentence(),

@@ -13,13 +13,13 @@ export class ExternalMovieRepository implements IExternalMovieRepository {
     private readonly httpService: HttpService,
   ) {}
 
-  async findById(id: string): Promise<Movie> {
+  async findOne({ external_id }: { external_id: number }): Promise<Movie> {
     try {
       const response = await this.httpService
-        .get(this.configService.get('EXTERNAL_MOVIE_SERVICE') + id)
+        .get(this.configService.get('EXTERNAL_MOVIE_SERVICE') + external_id)
         .toPromise();
       const movieData = response.data;
-      return new Movie({ ...movieData, external_id: id });
+      return new Movie({ ...movieData, external_id });
     } catch (error) {
       throw new InternalServerErrorException('Error al buscar la película');
     }
