@@ -41,6 +41,7 @@ describe('MovieService', () => {
             findOne: jest.fn(),
             create: jest.fn(),
             update: jest.fn(),
+            upsert: jest.fn(),
             deleteOne: jest.fn(),
           } as IMovieRepository,
         },
