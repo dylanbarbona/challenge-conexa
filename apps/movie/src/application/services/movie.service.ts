@@ -26,9 +26,11 @@ export class MovieService implements IMovieService {
     return from(this.externalMovieRepository.search(input)).pipe(
       mergeMap(async (movies) => {
         for (const movie of movies) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { external_id, id, _id, ...data } = movie;
           await this.movieRepository.update(
             { external_id: movie.external_id, deletedAt: null },
-            movie,
+            { ...data },
             { new: true, upsert: true },
           );
         }

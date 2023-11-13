@@ -79,7 +79,7 @@ export class MongoMovieRepository<T extends MovieDocument>
     filter: { external_id: number },
     input: UpdateMovieDto,
   ): Promise<Movie> {
-    const { _id, ...movie } = await this.findById(String(filter.external_id));
+    const { _id, ...movie } = await this.findOne(filter);
     const updatedMovie = await this.model.findByIdAndUpdate(
       _id,
       {

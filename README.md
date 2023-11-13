@@ -111,3 +111,14 @@ Los microservicios definidos son:
 Cada microservicio proporciona un Proxy, que es una implementación de la interfaz de los servicios que ofrece. Esto es
 lo único que los conecta entre sí. Al ser una implementación de esta interfaz, el uso de cada servicio en los demás es
 completamente transparente.
+
+Para probar se pueden utilizar los siguientes usuarios:
+
+Emails y contraseñas para probar:
+
+admin@admin.com
+12345678
+
+regular@regular.com
+12345678
+
