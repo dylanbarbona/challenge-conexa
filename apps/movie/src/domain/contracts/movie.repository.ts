@@ -20,5 +20,11 @@ export interface IMovieRepository extends IExternalMovieRepository {
     options?: any,
   ): Promise<Movie>;
 
+  upsert(
+    filter: Partial<Movie>,
+    input: Partial<Movie>,
+    options?: any,
+  ): Promise<Movie>;
+
   deleteOne(filter: { external_id: number }): Promise<Movie>;
 }

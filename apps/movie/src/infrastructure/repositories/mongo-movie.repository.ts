@@ -71,6 +71,11 @@ export class MongoMovieRepository<T extends MovieDocument>
       const movie = await super.create(input);
       return new Movie(movie);
     } catch (e) {
+      if (e.code === 11000) {
+        throw new BadRequestException(
+          'Error al crear la película, ese id ya existe',
+        );
+      }
       throw new BadRequestException('Error al crear la película');
     }
   }
@@ -88,6 +93,18 @@ export class MongoMovieRepository<T extends MovieDocument>
         updatedAt: new Date(),
       },
       { new: true },
+    );
+    return new Movie(updatedMovie);
+  }
+
+  async upsert(filter: { external_id: number }, input: UpdateMovieDto) {
+    const updatedMovie = await this.model.updateOne(
+      { external_id: filter.external_id },
+      {
+        ...input,
+        updatedAt: new Date(),
+      },
+      { new: true, upsert: true },
     );
     return new Movie(updatedMovie);
   }

@@ -28,8 +28,8 @@ export class MovieService implements IMovieService {
         for (const movie of movies) {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { external_id, id, _id, ...data } = movie;
-          await this.movieRepository.update(
-            { external_id: movie.external_id, deletedAt: null },
+          await this.movieRepository.upsert(
+            { external_id: Number(movie.external_id) },
             { ...data },
             { new: true, upsert: true },
           );
